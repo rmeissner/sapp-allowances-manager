@@ -93,7 +93,9 @@ const App: React.FC = () => {
           Current allowances
         </p>
         {allowances.map(allowance => <div>
-          {allowance.token} - {allowance.spender} - {allowance.allowance.toString()}<br />
+          Token: {allowance.token}<br />
+          Spender: {allowance.spender}<br />
+          Allowance: {allowance.allowance.toString()}<br />
           <span onClick={() => resetAllowance(allowance.token, allowance.spender)}>Reset</span>
           <hr />
         </div>)}
