@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import logo from './logo.svg';
 import { BigNumber, ethers } from 'ethers';
+import { useSafeAppsSDK } from '@gnosis.pm/safe-apps-react-sdk';
+import { SafeAppsSdkProvider } from '@gnosis.pm/safe-apps-ethers-provider';
 import './App.css';
 
 const Erc20 = [
@@ -21,24 +23,24 @@ interface Allowance {
 }
 
 const App: React.FC = () => {
+  const { sdk, connected, safe } = useSafeAppsSDK();
 
   // Wallet logic
-  const checkProviderEnabled = useCallback(async () => {
-    await window.ethereum.enable()
-  }, [window.ethereum])
   const walletAddress = useCallback(async () => {
-    await checkProviderEnabled()
-    return await provider.getSigner().getAddress()
-  }, [checkProviderEnabled, window.ethereum])
+    return (await sdk.getSafeInfo()).safeAddress
+  }, [sdk])
+
+  const [connectedAddress, setConnectedAddress] = useState("")
 
   // Build provider 
-  const provider = useMemo(() => new ethers.providers.Web3Provider(window.ethereum), [window.ethereum])
+  const provider = useMemo(() => new SafeAppsSdkProvider(safe, sdk), [safe, sdk])
 
   // Allowances loading logic
   const [allowances, setAllowances] = useState<Allowance[]>([])
   const loadAllowances = useCallback(async () => {
     try {
       const owner = await walletAddress()
+      setConnectedAddress(owner)
       const eventInterface = Erc20Interface.getEvent("Approval")
       const filter = {
         topics: Erc20Interface.encodeFilterTopics(eventInterface, [owner]),
@@ -77,20 +79,43 @@ const App: React.FC = () => {
 
   // Allowances reset logic
   const resetAllowance = useCallback(async(token: string, spender: string) => {
-    const tokenContract = new ethers.Contract( token , Erc20 , provider.getSigner() )
     try {
-      await tokenContract.approve(spender, 0)
+      await sdk.txs.send({
+        txs: [{
+          to: token,
+          value: '0',
+          data: Erc20Interface.encodeFunctionData("approve", [spender, 0])
+        }
+
+        ]
+      })
     } catch (e) {
       console.error(e)
     }
-  }, [provider])
+  }, [sdk])
+
+  // Allowances reset logic
+  const resetAllAllowances = useCallback(async(allowances: Allowance[]) => {
+    try {
+      await sdk.txs.send({
+        txs: allowances.map((allownace) => { return {
+          to: allownace.token,
+          value: '0',
+          data: Erc20Interface.encodeFunctionData("approve", [allownace.spender, 0])
+        }})
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }, [sdk])
 
   return (
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>
-          Current allowances
+          Current allowances for {connectedAddress}<br />
+          <span onClick={() => resetAllAllowances(allowances)}>Reset all</span>
         </p>
         {allowances.map(allowance => <div>
           Token: {allowance.token}<br />

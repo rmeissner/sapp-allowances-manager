@@ -1,6 +1,9 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "ETH Denver App",
+  "name": "ETH Denver App",
+  "description": "ETH Denver App - Allowance Manager",
+  "url": "https://www.ethdenver.com/post/gnosis",
+  "iconPath": "logo512.png",
   "icons": [
     {
       "src": "favicon.ico",
